@@ -112,30 +112,30 @@ elif page == "Churn Prediction":
 
     if st.button("Predict Churn"):
 
-        # Derived values
-        total_charges = monthly * max(tenure, 1)
-        avg_monthly = monthly
+        # take a real customer row as base template
+        base_row = df.sample(1).iloc[0].copy()
 
-        input_dict = {
-            "tenure": tenure,
-            "MonthlyCharges": monthly,
-            "TotalCharges": total_charges,
-            "TotalServices": services,
-            "EngagementScore": engagement,
-            "AvgMonthlyValue": avg_monthly,
-            "ContractRisk": contract_risk,
-            "AutoPay": autopay,
-            "HighValue": high_value
-        }
+        # update user features
+        base_row["tenure"] = tenure
+        base_row["MonthlyCharges"] = monthly
+        base_row["TotalServices"] = services
+        base_row["EngagementScore"] = engagement
+        base_row["ContractRisk"] = contract_risk
+        base_row["AutoPay"] = autopay
+        base_row["HighValue"] = high_value
+        base_row["TotalCharges"] = monthly * max(tenure, 1)
+        base_row["AvgMonthlyValue"] = monthly
 
-        input_df = pd.DataFrame([input_dict])
+        # remove target column
+        input_df = base_row.drop("Churn").to_frame().T
 
-        # Match churn model features
+        # match model training columns exactly
         input_df = input_df.reindex(
             columns=churn_model.feature_names_in_,
             fill_value=0
         )
 
+        # predict
         prob = churn_model.predict_proba(input_df)[0, 1]
 
         st.metric("Churn Probability", f"{prob:.2%}")
@@ -150,24 +150,20 @@ elif page == "Churn Prediction":
         # ===============================
         # SEGMENT PREDICTION
         # ===============================
-        # take a template row from dataset
-template = df.iloc[0].copy()
+        seg_features = [
+            "tenure",
+            "MonthlyCharges",
+            "TotalCharges",
+            "TotalServices",
+            "EngagementScore",
+            "AvgMonthlyValue",
+            "ContractRisk",
+            "AutoPay",
+            "HighValue"
+        ]
 
-# update only user fields
-template["tenure"] = tenure
-template["MonthlyCharges"] = monthly
-template["TotalServices"] = services
-template["EngagementScore"] = engagement
-template["ContractRisk"] = contract_risk
-template["AutoPay"] = autopay
-template["HighValue"] = high_value
-template["TotalCharges"] = monthly * max(tenure,1)
-template["AvgMonthlyValue"] = monthly
+        seg_input = pd.DataFrame([base_row])[seg_features]
+        seg_scaled = scaler.transform(seg_input)
+        segment_pred = kmeans.predict(seg_scaled)[0]
 
-# drop target
-input_df = template.drop("Churn").to_frame().T
-
-# match model columns
-input_df = input_df.reindex(columns=churn_model.feature_names_in_, fill_value=0)
-
-prob = churn_model.predict_proba(input_df)[0,1]
+        st.info(f"Predicted Customer Segment: {segment_pred}")
