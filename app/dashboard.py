@@ -202,9 +202,9 @@ elif page == "Churn Prediction":
 
         st.metric("Churn Probability", f"{prob:.2%}")
 
-        if prob > 0.7:
+        if prob > 0.40:
             st.error("High Churn Risk")
-        elif prob > 0.4:
+        elif prob > 0.25:
             st.warning("Medium Risk")
         else:
             st.success("Low Churn Risk")
