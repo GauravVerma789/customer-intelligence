@@ -150,21 +150,24 @@ elif page == "Churn Prediction":
         # ===============================
         # SEGMENT PREDICTION
         # ===============================
-        seg_features = [
-            "tenure",
-            "MonthlyCharges",
-            "TotalCharges",
-            "TotalServices",
-            "EngagementScore",
-            "AvgMonthlyValue",
-            "ContractRisk",
-            "AutoPay",
-            "HighValue"
-        ]
+        # take a template row from dataset
+template = df.iloc[0].copy()
 
-        seg_input = pd.DataFrame([input_dict])[seg_features]
+# update only user fields
+template["tenure"] = tenure
+template["MonthlyCharges"] = monthly
+template["TotalServices"] = services
+template["EngagementScore"] = engagement
+template["ContractRisk"] = contract_risk
+template["AutoPay"] = autopay
+template["HighValue"] = high_value
+template["TotalCharges"] = monthly * max(tenure,1)
+template["AvgMonthlyValue"] = monthly
 
-        seg_scaled = scaler.transform(seg_input)
-        segment_pred = kmeans.predict(seg_scaled)[0]
+# drop target
+input_df = template.drop("Churn").to_frame().T
 
-        st.info(f"Predicted Customer Segment: {segment_pred}")
+# match model columns
+input_df = input_df.reindex(columns=churn_model.feature_names_in_, fill_value=0)
+
+prob = churn_model.predict_proba(input_df)[0,1]
