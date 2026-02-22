@@ -105,69 +105,120 @@ elif page == "Churn Prediction":
         services = st.slider("Total Services", 0, 9, 3)
         engagement = st.slider("Engagement Score", 0.0, 20.0, 5.0)
 
-    with col2:
-        contract_risk = st.selectbox("Contract Risk", [0, 1, 2])
-        autopay = st.selectbox("AutoPay (0=Yes,1=No)", [0, 1])
-        high_value = st.selectbox("High Value Customer", [0, 1])
+   with col2:
+    contract_risk = st.selectbox("Contract Risk", [0, 1, 2])
+    autopay = st.selectbox("AutoPay (0=Yes,1=No)", [0, 1])
+    high_value = st.selectbox("High Value Customer", [0, 1])
+
+    # NEW CONTROLS
+    internet_service = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
+    tech_support = st.selectbox("Tech Support", ["Yes", "No"])
+    online_security = st.selectbox("Online Security", ["Yes", "No"])
+    streaming_tv = st.selectbox("Streaming TV", ["Yes", "No"])
 
     if st.button("Predict Churn"):
 
-        # use FIXED base row (deterministic)
-        base_row = df.iloc[0].copy()
+    base_row = df.iloc[0].copy()
 
-        # numeric features
-        base_row["tenure"] = tenure
-        base_row["MonthlyCharges"] = monthly
-        base_row["TotalServices"] = services
-        base_row["EngagementScore"] = engagement
-        base_row["TotalCharges"] = monthly * max(tenure, 1)
-        base_row["AvgMonthlyValue"] = monthly
-        base_row["HighValue"] = high_value
+    # numeric
+    base_row["tenure"] = tenure
+    base_row["MonthlyCharges"] = monthly
+    base_row["TotalServices"] = services
+    base_row["EngagementScore"] = engagement
+    base_row["TotalCharges"] = monthly * max(tenure, 1)
+    base_row["AvgMonthlyValue"] = monthly
+    base_row["HighValue"] = high_value
 
-        # ===============================
-        # CONTRACT ENCODING
-        # ===============================
-        base_row["Contract_Month-to-month"] = 0
-        base_row["Contract_One year"] = 0
-        base_row["Contract_Two year"] = 0
+    # ======================
+    # CONTRACT
+    # ======================
+    base_row["Contract_Month-to-month"] = 0
+    base_row["Contract_One year"] = 0
+    base_row["Contract_Two year"] = 0
 
-        if contract_risk == 2:
-            base_row["Contract_Month-to-month"] = 1
-        elif contract_risk == 1:
-            base_row["Contract_One year"] = 1
-        else:
-            base_row["Contract_Two year"] = 1
+    if contract_risk == 2:
+        base_row["Contract_Month-to-month"] = 1
+    elif contract_risk == 1:
+        base_row["Contract_One year"] = 1
+    else:
+        base_row["Contract_Two year"] = 1
 
-        # ===============================
-        # PAYMENT ENCODING
-        # ===============================
-        base_row["PaymentMethod_Electronic check"] = 0
-        base_row["PaymentMethod_Mailed check"] = 0
-        base_row["PaymentMethod_Bank transfer (automatic)"] = 0
-        base_row["PaymentMethod_Credit card (automatic)"] = 0
+    # ======================
+    # PAYMENT
+    # ======================
+    base_row["PaymentMethod_Electronic check"] = 0
+    base_row["PaymentMethod_Credit card (automatic)"] = 0
+    base_row["PaymentMethod_Bank transfer (automatic)"] = 0
+    base_row["PaymentMethod_Mailed check"] = 0
 
-        if autopay == 1:
-            base_row["PaymentMethod_Electronic check"] = 1
-        else:
-            base_row["PaymentMethod_Credit card (automatic)"] = 1
+    if autopay == 1:
+        base_row["PaymentMethod_Electronic check"] = 1
+    else:
+        base_row["PaymentMethod_Credit card (automatic)"] = 1
 
-        # ===============================
-        # PREDICTION
-        # ===============================
-        input_df = base_row.drop("Churn").to_frame().T
-        input_df = input_df.reindex(columns=churn_model.feature_names_in_, fill_value=0)
+    # ======================
+    # INTERNET SERVICE
+    # ======================
+    base_row["InternetService_DSL"] = 0
+    base_row["InternetService_Fiber optic"] = 0
+    base_row["InternetService_No"] = 0
 
-        prob = churn_model.predict_proba(input_df)[0, 1]
+    if internet_service == "Fiber optic":
+        base_row["InternetService_Fiber optic"] = 1
+    elif internet_service == "DSL":
+        base_row["InternetService_DSL"] = 1
+    else:
+        base_row["InternetService_No"] = 1
 
-        st.metric("Churn Probability", f"{prob:.2%}")
+    # ======================
+    # TECH SUPPORT
+    # ======================
+    base_row["TechSupport_Yes"] = 0
+    base_row["TechSupport_No"] = 0
 
-        if prob > 0.7:
-            st.error("High Churn Risk")
-        elif prob > 0.4:
-            st.warning("Medium Risk")
-        else:
-            st.success("Low Churn Risk")
+    if tech_support == "Yes":
+        base_row["TechSupport_Yes"] = 1
+    else:
+        base_row["TechSupport_No"] = 1
 
+    # ======================
+    # ONLINE SECURITY
+    # ======================
+    base_row["OnlineSecurity_Yes"] = 0
+    base_row["OnlineSecurity_No"] = 0
+
+    if online_security == "Yes":
+        base_row["OnlineSecurity_Yes"] = 1
+    else:
+        base_row["OnlineSecurity_No"] = 1
+
+    # ======================
+    # STREAMING TV
+    # ======================
+    base_row["StreamingTV_Yes"] = 0
+    base_row["StreamingTV_No"] = 0
+
+    if streaming_tv == "Yes":
+        base_row["StreamingTV_Yes"] = 1
+    else:
+        base_row["StreamingTV_No"] = 1
+
+    # ======================
+    # PREDICT
+    # ======================
+    input_df = base_row.drop("Churn").to_frame().T
+    input_df = input_df.reindex(columns=churn_model.feature_names_in_, fill_value=0)
+
+    prob = churn_model.predict_proba(input_df)[0, 1]
+
+    st.metric("Churn Probability", f"{prob:.2%}")
+
+    if prob > 0.7:
+        st.error("High Churn Risk")
+    elif prob > 0.4:
+        st.warning("Medium Risk")
+    else:
+        st.success("Low Churn Risk")
         # ===============================
         # SEGMENT PREDICTION
         # ===============================
